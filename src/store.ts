@@ -16,7 +16,7 @@ interface Store {
   setCurrentDoc: (id: string) => void
   addMessage: (msg: Message) => void
   clearMessages: () => void
-  removeLastMessage: () => void
+  removeLastMessage: () => void // 新增
   updateAISettings: (settings: Partial<AISettings>) => void
   addKnowledge: (entry: Omit<KnowledgeEntry, 'id'>) => void
   updateKnowledge: (id: string, entry: Partial<KnowledgeEntry>) => void
@@ -64,7 +64,7 @@ export const useStore = create<Store>()(
         docs: state.docs,
         currentDocId: state.currentDocId,
         messages: state.messages,
-        aiSettings: state.aiSettings, // 保持保存 Key
+        aiSettings: state.aiSettings, // 保持 Key 持久化
         knowledge: state.knowledge,
       })
     }
