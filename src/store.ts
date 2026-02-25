@@ -16,6 +16,7 @@ interface Store {
   setCurrentDoc: (id: string) => void
   addMessage: (msg: Message) => void
   clearMessages: () => void
+  removeLastMessage: () => void
   updateAISettings: (settings: Partial<AISettings>) => void
   addKnowledge: (entry: Omit<KnowledgeEntry, 'id'>) => void
   updateKnowledge: (id: string, entry: Partial<KnowledgeEntry>) => void
@@ -27,18 +28,17 @@ interface Store {
 
 export const useStore = create<Store>()(
   persist(
-    (set, _get) => ({
+    (set) => ({
       docs: [],
       currentDocId: null,
       messages: [],
       aiSettings: {
-        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        apiUrl: 'https://max8.us.ci',
         apiKey: '',
         model: 'gpt-4o-mini',
       },
       knowledge: [],
       externalKnowledge: [],
-
       addDoc: (title) => {
         const doc: Doc = { id: Date.now().toString(), title, content: '', createdAt: Date.now(), updatedAt: Date.now() }
         set((s) => ({ docs: [...s.docs, doc], currentDocId: doc.id }))
@@ -49,6 +49,7 @@ export const useStore = create<Store>()(
       setCurrentDoc: (id) => set((s) => ({ currentDocId: id, messages: s.currentDocId !== id ? [] : s.messages })),
       addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
       clearMessages: () => set({ messages: [] }),
+      removeLastMessage: () => set((s) => ({ messages: s.messages.slice(0, -1) })),
       updateAISettings: (settings) => set((s) => ({ aiSettings: { ...s.aiSettings, ...settings } })),
       addKnowledge: (entry) => set((s) => ({ knowledge: [...s.knowledge, { ...entry, id: Date.now().toString() }] })),
       updateKnowledge: (id, entry) => set((s) => ({ knowledge: s.knowledge.map((k) => k.id === id ? { ...k, ...entry } : k) })),
@@ -63,7 +64,7 @@ export const useStore = create<Store>()(
         docs: state.docs,
         currentDocId: state.currentDocId,
         messages: state.messages,
-        aiSettings: state.aiSettings, // 确保地址、Key、模型全部保存
+        aiSettings: state.aiSettings, // 保持保存 Key
         knowledge: state.knowledge,
       })
     }
