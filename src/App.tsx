@@ -17,7 +17,7 @@ function App() {
   const [storageUsage, setStorageUsage] = useState('')
 
   const currentDoc = getCurrentDoc()
-  // 必须在 JSX 中用到 matchedKnowledge
+  // 必须在 JSX 中使用 matchedKnowledge 否则 Cloudflare 构建会失败
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
 
   useEffect(() => {
@@ -47,28 +47,28 @@ function App() {
       const reply = await sendToAI(history, aiSettings, currentDoc?.content)
       addMessage({ role: 'assistant', content: reply })
     } catch (err: any) {
-      addMessage({ role: 'assistant', content: `重新生成失败: ${err.message}` })
+      addMessage({ role: 'assistant', content: `生成失败: ${err.message}` })
     }
     setLoading(false)
   }
 
-  const handleLoadExternal = () => {
+  const handleFileLoad = () => {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
     inp.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         try { 
-          const entries = JSON.parse(await file.text()); 
-          // 必须用到 setExternalKnowledge
-          setExternalKnowledge(Array.isArray(entries) ? entries : []); 
-          alert('外部知识库加载完成');
-        } catch { alert('格式错误'); }
+            const d = JSON.parse(await file.text()); 
+            // 使用 setExternalKnowledge
+            setExternalKnowledge(Array.isArray(d) ? d : []); 
+            alert('已成功加载外部知识库');
+        } catch { alert('文件解析错误'); }
       }
     }
     inp.click()
   }
 
-  const insertToEditor = (text: string) => {
+  const insertContent = (text: string) => {
     if (!currentDoc) return
     updateDoc(currentDoc.id, currentDoc.content + '<p>' + text.replace(/\n/g, '</p><p>') + '</p>')
   }
@@ -87,13 +87,11 @@ function App() {
         <div className="sidebar-footer">
           <button onClick={() => setShowKnowledge(true)}>📖 知识库({knowledge.length})</button>
           <button onClick={() => setShowSettings(true)}>⚙️ 设置</button>
-          {currentDoc && (
-            <div className="export-btns">
-               {/* 必须用到 exportToTxt 和 exportToWord */}
-              <button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>导出TXT</button>
-              <button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>导出Word</button>
-            </div>
-          )}
+          {currentDoc && <div className="export-btns">
+            {/* 使用导出函数 */}
+            <button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>导出TXT</button>
+            <button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>导出Word</button>
+          </div>}
         </div>
       </aside>
 
@@ -107,8 +105,8 @@ function App() {
                   <div key={i} className={`message ${msg.role}`}><div className="message-content">{msg.content}</div>
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
-                        <button onClick={() => insertToEditor(msg.content)}>📝 插入</button>
-                        {/* 重新生成按钮在这里 */}
+                        <button onClick={() => insertContent(msg.content)}>📝 插入</button>
+                        {/* 重新生成按钮 */}
                         <button onClick={() => handleRegenerate(i)}>🔄 重新生成</button>
                         <button onClick={() => setSaveDropdown(saveDropdown === `${i}` ? null : `${i}`)}>💾 存入知识库</button>
                         {saveDropdown === `${i}` && <div className="save-dropdown">{knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)}</div>}
@@ -118,14 +116,14 @@ function App() {
                 ))}
                 {loading && <div className="message assistant loading">思考中...</div>}
               </div>
-              {/* 显示 matchedKnowledge 解决报错 */}
-              {matchedKnowledge.length > 0 && <div className="matched-hint" style={{fontSize:'10px', color:'#888', padding:'5px 10px'}}>📎 已匹配设定: {matchedKnowledge.length} 条</div>}
+              {/* 使用 matchedKnowledge 解决编译报错 */}
+              {matchedKnowledge.length > 0 && <div className="matched-hint" style={{fontSize: '11px', color: '#999', padding: '5px'}}>📎 参考资料: {matchedKnowledge.length} 条</div>}
               <div className="chat-input">
                 <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {if(e.key === 'Enter' && !e.shiftKey){e.preventDefault(); handleSend();}}} placeholder="输入消息..." />
                 <button onClick={handleSend} disabled={loading}>发送</button>
               </div>
             </div></>
-        ) : <div className="empty-state"><h2>✨ 写作助手</h2><button onClick={() => {const t = prompt('标题:'); if(t) addDoc(t)}}>新建一个文档开始吧</button></div>}
+        ) : <div className="empty-state"><h2>✨ 写作助手</h2><button onClick={() => {const t = prompt('标题:'); if(t) addDoc(t)}}>创建一个文档开始</button></div>}
       </main>
 
       {showSettings && (
@@ -137,11 +135,11 @@ function App() {
             <label>模型<input value={aiSettings.model} onChange={(e) => updateAISettings({ model: e.target.value })} /></label>
             <div className="settings-section">
                 <p>存储: {storageUsage} | 外部知识: {externalKnowledge.length}条</p>
-                {/* 使用 handleLoadExternal 和 clearExternalKnowledge 解决报错 */}
-                <button onClick={handleLoadExternal}>加载外部知识库</button>
+                {/* 使用 handleFileLoad 和 clearExternalKnowledge 解决编译报错 */}
+                <button onClick={handleFileLoad}>加载外部知识库</button>
                 <button onClick={clearExternalKnowledge}>卸载外部知识</button>
             </div>
-            <button onClick={() => setShowSettings(false)}>确定</button>
+            <button onClick={() => setShowSettings(false)}>确定并关闭</button>
           </div>
         </div>
       )}
