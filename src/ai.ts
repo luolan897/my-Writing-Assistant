@@ -35,29 +35,17 @@ export async function sendToAI(
     }
   }
 
-  // --- 这里的逻辑可以适配各种公益站 ---
-  let finalUrl = settings.apiUrl.trim();
-  
-  // 1. 如果没写 http，自动加 https
-  if (!finalUrl.startsWith('http')) {
-    finalUrl = 'https://' + finalUrl;
+  // 1. 处理原始 URL
+  let targetUrl = settings.apiUrl.trim();
+  if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
+  if (!targetUrl.endsWith('/chat/completions')) {
+      targetUrl = targetUrl.replace(/\/$/, '') + '/v1/chat/completions';
   }
+  targetUrl = targetUrl.replace('/v1/v1', '/v1');
 
-  // 2. 智能补全路径：如果用户只写了域名或 v1，补全末尾
-  if (!finalUrl.endsWith('/chat/completions')) {
-      // 删掉末尾的斜杠
-      finalUrl = finalUrl.replace(/\/$/, '');
-      if (finalUrl.endsWith('/v1')) {
-          finalUrl += '/chat/completions';
-      } else {
-          finalUrl += '/v1/chat/completions';
-      }
-  }
-  
-  // 3. 最终防御：防止出现 v1/v1 的情况
-  finalUrl = finalUrl.replace('/v1/v1', '/v1');
-
-  console.log("正在尝试请求接口:", finalUrl); 
+  // 2. 【核心黑科技】使用公开代理服务绕过浏览器跨域限制
+  // 这样网页版就能像 Cherry Studio 一样访问任何公益站了
+  const finalUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
   try {
     const res = await fetch(finalUrl, {
@@ -77,22 +65,14 @@ export async function sendToAI(
     })
 
     if (!res.ok) {
-        const errBody = await res.text();
-        // 专门处理常见的错误提示
-        if (res.status === 401) throw new Error("API Key 错误或已失效");
-        if (res.status === 404) throw new Error("接口地址(URL)填写错误，找不到路径");
-        if (res.status === 403) throw new Error("服务器拒绝访问，可能是跨域(CORS)限制");
-        throw new Error(`服务器返回错误(${res.status}): ${errBody.slice(0, 100)}`);
+        const errDetail = await res.text();
+        throw new Error(`API错误: ${res.status} ${errDetail}`);
     }
     
     const data = await res.json()
-    return data.choices?.[0]?.message?.content || 'AI 返回了空内容'
+    return data.choices?.[0]?.message?.content || '无响应'
   } catch (err: any) {
-    console.error("请求彻底失败:", err);
-    // 给小白用户的温馨提示
-    if (err.message.includes('Failed to fetch')) {
-        return "网络连接失败！可能原因：\n1. 你的网络无法直接访问该公益站\n2. 该公益站禁止了浏览器跨域请求(CORS)\n3. 接口地址拼写错误";
-    }
-    return `请求出错: ${err.message}`;
+    console.error("请求失败:", err);
+    return `请求失败了。原因：${err.message}\n提示：请检查 API Key 是否正确。`;
   }
 }
