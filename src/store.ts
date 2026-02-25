@@ -1,40 +1,22 @@
-/**
- * 全局状态管理
- * 使用 Zustand 进行状态管理，数据自动持久化到 localStorage
- */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Doc, Message, AISettings, KnowledgeEntry } from './types'
 
-// 状态接口定义
 interface Store {
-  // 文档相关
-  docs: Doc[]                    // 所有文档列表
-  currentDocId: string | null    // 当前选中的文档ID
-  
-  // AI对话相关
-  messages: Message[]            // 对话消息列表
-  aiSettings: AISettings         // AI配置（API地址、密钥、模型）
-  
-  // 知识库相关
-  knowledge: KnowledgeEntry[]           // 内置知识库（存储到localStorage）
-  externalKnowledge: KnowledgeEntry[]   // 外部知识库（不存储，临时加载）
-  
-  // 文档操作方法
+  docs: Doc[]
+  currentDocId: string | null
+  messages: Message[]
+  aiSettings: AISettings
+  knowledge: KnowledgeEntry[]
+  externalKnowledge: KnowledgeEntry[]
   addDoc: (title: string) => void
   updateDoc: (id: string, content: string) => void
   renameDoc: (id: string, title: string) => void
   deleteDoc: (id: string) => void
   setCurrentDoc: (id: string) => void
-  
-  // 消息操作方法
   addMessage: (msg: Message) => void
   clearMessages: () => void
-  
-  // 设置操作方法
   updateAISettings: (settings: Partial<AISettings>) => void
-  
-  // 知识库操作方法
   addKnowledge: (entry: Omit<KnowledgeEntry, 'id'>) => void
   updateKnowledge: (id: string, entry: Partial<KnowledgeEntry>) => void
   deleteKnowledge: (id: string) => void
@@ -46,120 +28,48 @@ interface Store {
 export const useStore = create<Store>()(
   persist(
     (set, _get) => ({
-      // 初始状态
       docs: [],
       currentDocId: null,
       messages: [],
       aiSettings: {
         apiUrl: 'https://api.openai.com/v1/chat/completions',
-        apiKey: 'state.aiSettings.apiKey',
+        apiKey: '',
         model: 'gpt-4o-mini',
       },
       knowledge: [],
       externalKnowledge: [],
 
-      // 新建文档
       addDoc: (title) => {
-        const doc: Doc = {
-          id: Date.now().toString(),
-          title,
-          content: '',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
+        const doc: Doc = { id: Date.now().toString(), title, content: '', createdAt: Date.now(), updatedAt: Date.now() }
         set((s) => ({ docs: [...s.docs, doc], currentDocId: doc.id }))
       },
-
-      // 更新文档内容
-      updateDoc: (id, content) =>
-        set((s) => ({
-          docs: s.docs.map((d) =>
-            d.id === id ? { ...d, content, updatedAt: Date.now() } : d
-          ),
-        })),
-
-      // 重命名文档
-      renameDoc: (id, title) =>
-        set((s) => ({
-          docs: s.docs.map((d) => (d.id === id ? { ...d, title } : d)),
-        })),
-
-      // 删除文档（同时清空聊天记录，避免串话）
-      deleteDoc: (id) =>
-        set((s) => ({
-          docs: s.docs.filter((d) => d.id !== id),
-          currentDocId: s.currentDocId === id ? null : s.currentDocId,
-          messages: s.currentDocId === id ? [] : s.messages,
-        })),
-
-      // 切换当前文档（同时清空聊天记录，避免串话）
-      setCurrentDoc: (id) => set((s) => ({ 
-        currentDocId: id,
-        messages: s.currentDocId !== id ? [] : s.messages,
-      })),
-
-      // 添加对话消息
+      updateDoc: (id, content) => set((s) => ({ docs: s.docs.map((d) => d.id === id ? { ...d, content, updatedAt: Date.now() } : d) })),
+      renameDoc: (id, title) => set((s) => ({ docs: s.docs.map((d) => (d.id === id ? { ...d, title } : d)) })),
+      deleteDoc: (id) => set((s) => ({ docs: s.docs.filter((d) => d.id !== id), currentDocId: s.currentDocId === id ? null : s.currentDocId, messages: s.currentDocId === id ? [] : s.messages })),
+      setCurrentDoc: (id) => set((s) => ({ currentDocId: id, messages: s.currentDocId !== id ? [] : s.messages })),
       addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-
-      // 清空对话
       clearMessages: () => set({ messages: [] }),
-
-      // 更新AI设置
-      updateAISettings: (settings) =>
-        set((s) => ({ aiSettings: { ...s.aiSettings, ...settings } })),
-
-      // 添加知识库条目
-      addKnowledge: (entry) =>
-        set((s) => ({
-          knowledge: [...s.knowledge, { ...entry, id: Date.now().toString() }],
-        })),
-
-      // 更新知识库条目
-      updateKnowledge: (id, entry) =>
-        set((s) => ({
-          knowledge: s.knowledge.map((k) =>
-            k.id === id ? { ...k, ...entry } : k
-          ),
-        })),
-
-      // 删除知识库条目
-      deleteKnowledge: (id) =>
-        set((s) => ({ knowledge: s.knowledge.filter((k) => k.id !== id) })),
-
-      // 追加内容到知识库条目
-      appendToKnowledge: (id, content) =>
-        set((s) => ({
-          knowledge: s.knowledge.map((k) =>
-            k.id === id ? { ...k, content: k.content + '\n\n---\n\n' + content } : k
-          ),
-        })),
-
-      // 设置外部知识库（从JSON文件加载）
+      updateAISettings: (settings) => set((s) => ({ aiSettings: { ...s.aiSettings, ...settings } })),
+      addKnowledge: (entry) => set((s) => ({ knowledge: [...s.knowledge, { ...entry, id: Date.now().toString() }] })),
+      updateKnowledge: (id, entry) => set((s) => ({ knowledge: s.knowledge.map((k) => k.id === id ? { ...k, ...entry } : k) })),
+      deleteKnowledge: (id) => set((s) => ({ knowledge: s.knowledge.filter((k) => k.id !== id) })),
+      appendToKnowledge: (id, content) => set((s) => ({ knowledge: s.knowledge.map((k) => k.id === id ? { ...k, content: k.content + '\n\n---\n\n' + content } : k) })),
       setExternalKnowledge: (entries) => set({ externalKnowledge: entries }),
-      
-      // 清空外部知识库
       clearExternalKnowledge: () => set({ externalKnowledge: [] }),
     }),
     { 
-      name: 'writing-assistant-store',  // localStorage 的 key
-      // 只持久化这些字段，externalKnowledge 不存储
-      // apiKey 不持久化，避免泄露风险
+      name: 'writing-assistant-store',
       partialize: (state) => ({
         docs: state.docs,
         currentDocId: state.currentDocId,
         messages: state.messages,
-        aiSettings: {
-          apiUrl: state.aiSettings.apiUrl,
-          model: state.aiSettings.model,
-          // apiKey 故意不持久化，每次启动需重新输入
-        },
+        aiSettings: state.aiSettings, // 确保地址、Key、模型全部保存
         knowledge: state.knowledge,
       })
     }
   )
 )
 
-// 获取当前文档的辅助函数
 export const getCurrentDoc = () => {
   const { docs, currentDocId } = useStore.getState()
   return docs.find((d) => d.id === currentDocId)
