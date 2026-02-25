@@ -16,7 +16,6 @@ interface Store {
   setCurrentDoc: (id: string) => void
   addMessage: (msg: Message) => void
   clearMessages: () => void
-  // 统一函数名
   removeMessagesFrom: (index: number) => void
   updateAISettings: (settings: Partial<AISettings>) => void
   addKnowledge: (entry: Omit<KnowledgeEntry, 'id'>) => void
