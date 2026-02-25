@@ -17,6 +17,7 @@ function App() {
   const [storageUsage, setStorageUsage] = useState('')
 
   const currentDoc = getCurrentDoc()
+  // 修复错误：这里定义了 matchedKnowledge
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
 
   useEffect(() => {
@@ -29,8 +30,11 @@ function App() {
     inp.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
-        try { const entries = JSON.parse(await file.text()); setExternalKnowledge(Array.isArray(entries) ? entries : (entries.state?.knowledge || [])); } 
-        catch { alert('格式错误'); }
+        try { 
+          const entries = JSON.parse(await file.text()); 
+          setExternalKnowledge(Array.isArray(entries) ? entries : (entries.state?.knowledge || [])); 
+          alert('外部知识库加载成功');
+        } catch { alert('格式错误'); }
       }
     }
     inp.click()
@@ -82,7 +86,7 @@ function App() {
           ))}
         </ul>
         <div className="sidebar-footer">
-          <button onClick={() => setShowKnowledge(true)}>📖 知识库</button>
+          <button onClick={() => setShowKnowledge(true)}>📖 知识库({knowledge.length})</button>
           <button onClick={() => setShowSettings(true)}>⚙️ 设置</button>
           {currentDoc && <div className="export-btns"><button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>TXT</button><button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>Word</button></div>}
         </div>
@@ -107,8 +111,16 @@ function App() {
                 ))}
                 {loading && <div className="message assistant loading">思考中...</div>}
               </div>
+              
+              {/* 修复点：用到 matchedKnowledge */}
+              {matchedKnowledge.length > 0 && (
+                <div className="matched-hint" style={{fontSize: '12px', padding: '4px 12px', color: '#666'}}>
+                  📎 匹配到设定: {matchedKnowledge.map(k => k.title).join(', ')}
+                </div>
+              )}
+
               <div className="chat-input">
-                <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {if(e.key === 'Enter' && !e.shiftKey){e.preventDefault(); handleSend();}}} />
+                <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {if(e.key === 'Enter' && !e.shiftKey){e.preventDefault(); handleSend();}}} placeholder="输入消息..." />
                 <button onClick={handleSend} disabled={loading}>发送</button>
               </div>
             </div></>
@@ -122,12 +134,22 @@ function App() {
             <label>API URL<input value={aiSettings.apiUrl} onChange={(e) => updateAISettings({ apiUrl: e.target.value })} /></label>
             <label>API Key<input type="password" value={aiSettings.apiKey} onChange={(e) => updateAISettings({ apiKey: e.target.value })} /></label>
             <label>模型<input value={aiSettings.model} onChange={(e) => updateAISettings({ model: e.target.value })} /></label>
-            <div className="settings-section">
-              <h4>数据管理</h4><p>存储使用: {storageUsage}</p>
-              <button onClick={loadExternalKnowledge}>加载外部知识库</button>
-              <button onClick={() => { localStorage.clear(); location.reload(); }}>清空所有数据</button>
+            
+            <div className="settings-section" style={{marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px'}}>
+              <h4>数据与知识库</h4>
+              <p>存储已用: {storageUsage}</p>
+              
+              {/* 修复点：用到 externalKnowledge 和 clearExternalKnowledge */}
+              <div style={{display: 'flex', gap: '8px', marginTop: '10px'}}>
+                <button onClick={loadExternalKnowledge}>加载外部知识库</button>
+                {externalKnowledge.length > 0 && (
+                  <button onClick={clearExternalKnowledge} style={{color: 'red'}}>卸载外部({externalKnowledge.length}条)</button>
+                )}
+              </div>
+              
+              <button style={{marginTop: '10px'}} onClick={() => { if(confirm('清空所有数据？')) { localStorage.clear(); location.reload(); } }}>重置所有数据</button>
             </div>
-            <button onClick={() => setShowSettings(false)}>确定</button>
+            <button style={{marginTop: '20px', width: '100%'}} onClick={() => setShowSettings(false)}>确定</button>
           </div>
         </div>
       )}
