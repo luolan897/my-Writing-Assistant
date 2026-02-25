@@ -33,7 +33,7 @@ export const useStore = create<Store>()(
       currentDocId: null,
       messages: [],
       aiSettings: {
-        apiUrl: 'https://max8.us.ci',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
         apiKey: '',
         model: 'gpt-4o-mini',
       },
