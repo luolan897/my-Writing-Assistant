@@ -14,12 +14,12 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   const lastUserMsg = messages[messages.length - 1]?.content || ''
   const matched = getMatchedKnowledge(lastUserMsg)
 
-  let systemPrompt = `你是一个小说写作助手。`
+  let systemPrompt = `你是一个写作助手。`
   if (matched.length > 0) {
     systemPrompt += '\n参考资料：' + matched.map(k => k.content).join('\n')
   }
   if (currentContent) {
-    systemPrompt += `\n文档内容：${currentContent.replace(/<[^>]*>/g, '').slice(0, 1000)}`
+    systemPrompt += `\n文档：${currentContent.replace(/<[^>]*>/g, '').slice(0, 1000)}`
   }
 
   let targetUrl = settings.apiUrl.trim();
@@ -29,23 +29,26 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   }
   targetUrl = targetUrl.replace('/v1/v1', '/v1');
 
-  // 使用代理绕过跨域封锁
+  // 使用跨域代理。
   const finalUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
-  const response = await fetch(finalUrl, {
+  const res = await fetch(finalUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${settings.apiKey.trim()}`
     },
     body: JSON.stringify({
-      model: settings.model || 'gpt-3.5-turbo',
+      model: settings.model.trim() || 'gpt-3.5-turbo',
       messages: [{ role: 'system', content: systemPrompt }, ...messages.map(m => ({role: m.role, content: m.content}))],
       stream: false
     })
   });
 
-  if (!response.ok) throw new Error(`API报错: ${response.status}`);
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'AI未返回内容';
+  if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || `错误码:${res.status}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || 'AI无响应';
 }
