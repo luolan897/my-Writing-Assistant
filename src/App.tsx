@@ -7,7 +7,7 @@ import { Knowledge } from './Knowledge'
 import './App.css'
 
 function App() {
-  const { docs, currentDocId, messages, aiSettings, knowledge, externalKnowledge, addDoc, updateDoc, renameDoc, deleteDoc, setCurrentDoc, addMessage, clearMessages, removeLastMessage, updateAISettings, appendToKnowledge, setExternalKnowledge, clearExternalKnowledge } = useStore()
+  const { docs, currentDocId, messages, aiSettings, knowledge, externalKnowledge, addDoc, updateDoc, renameDoc, deleteDoc, setCurrentDoc, addMessage, clearMessages, removeMessagesFrom, updateAISettings, appendToKnowledge, setExternalKnowledge, clearExternalKnowledge } = useStore()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -17,7 +17,6 @@ function App() {
   const [storageUsage, setStorageUsage] = useState('')
 
   const currentDoc = getCurrentDoc()
-  // 修复错误：这里定义了 matchedKnowledge
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
 
   useEffect(() => {
@@ -32,8 +31,7 @@ function App() {
       if (file) {
         try { 
           const entries = JSON.parse(await file.text()); 
-          setExternalKnowledge(Array.isArray(entries) ? entries : (entries.state?.knowledge || [])); 
-          alert('外部知识库加载成功');
+          setExternalKnowledge(Array.isArray(entries) ? entries : (entries.state?.knowledge || []));
         } catch { alert('格式错误'); }
       }
     }
@@ -48,23 +46,23 @@ function App() {
       const reply = await sendToAI([...messages, userMsg], aiSettings, currentDoc?.content)
       addMessage({ role: 'assistant', content: reply })
     } catch (err: any) {
-      addMessage({ role: 'assistant', content: `错误: ${err.message}` })
+      addMessage({ role: 'assistant', content: `请求失败: ${err.message}` })
     }
     setLoading(false)
   }
 
-  const handleRegenerate = async () => {
-    if (loading || messages.length === 0) return
-    let history = [...messages]
-    if (history[history.length - 1].role === 'assistant') {
-      removeLastMessage(); history.pop()
-    }
+  // 核心：在特定位置重新生成
+  const handleRegenerateAt = async (index: number) => {
+    if (loading) return
+    // 删除这条回复及之后的所有消息
+    const history = messages.slice(0, index)
+    removeMessagesFrom(index)
     setLoading(true)
     try {
       const reply = await sendToAI(history, aiSettings, currentDoc?.content)
       addMessage({ role: 'assistant', content: reply })
     } catch (err: any) {
-      addMessage({ role: 'assistant', content: `错误: ${err.message}` })
+      addMessage({ role: 'assistant', content: `重新生成失败: ${err.message}` })
     }
     setLoading(false)
   }
@@ -96,13 +94,14 @@ function App() {
         {currentDoc ? (
           <><div className="editor-panel"><Editor content={currentDoc.content} onChange={(val) => updateDoc(currentDoc.id, val)} /></div>
             <div className="chat-panel">
-              <div className="chat-header"><span>🤖 AI 助手</span><div><button onClick={handleRegenerate} disabled={loading || messages.length === 0}>🔄 重新生成</button><button onClick={clearMessages}>清空</button></div></div>
+              <div className="chat-header"><span>🤖 AI 助手</span><button onClick={clearMessages}>清空</button></div>
               <div className="chat-messages">
                 {messages.map((msg, i) => (
                   <div key={i} className={`message ${msg.role}`}><div className="message-content">{msg.content}</div>
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
                         <button onClick={() => insertToEditor(msg.content)}>📝 插入</button>
+                        <button onClick={() => handleRegenerateAt(i)}>🔄 重新生成</button>
                         <button onClick={() => setSaveDropdown(saveDropdown === `${i}` ? null : `${i}`)}>💾 存入知识库</button>
                         {saveDropdown === `${i}` && <div className="save-dropdown">{knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)}</div>}
                       </div>
@@ -111,14 +110,7 @@ function App() {
                 ))}
                 {loading && <div className="message assistant loading">思考中...</div>}
               </div>
-              
-              {/* 修复点：用到 matchedKnowledge */}
-              {matchedKnowledge.length > 0 && (
-                <div className="matched-hint" style={{fontSize: '12px', padding: '4px 12px', color: '#666'}}>
-                  📎 匹配到设定: {matchedKnowledge.map(k => k.title).join(', ')}
-                </div>
-              )}
-
+              {matchedKnowledge.length > 0 && <div style={{fontSize:'10px', color:'#999', padding:'2px 10px'}}>📎 匹配设定: {matchedKnowledge.map(k=>k.title).join(',')}</div>}
               <div className="chat-input">
                 <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {if(e.key === 'Enter' && !e.shiftKey){e.preventDefault(); handleSend();}}} placeholder="输入消息..." />
                 <button onClick={handleSend} disabled={loading}>发送</button>
@@ -134,22 +126,12 @@ function App() {
             <label>API URL<input value={aiSettings.apiUrl} onChange={(e) => updateAISettings({ apiUrl: e.target.value })} /></label>
             <label>API Key<input type="password" value={aiSettings.apiKey} onChange={(e) => updateAISettings({ apiKey: e.target.value })} /></label>
             <label>模型<input value={aiSettings.model} onChange={(e) => updateAISettings({ model: e.target.value })} /></label>
-            
-            <div className="settings-section" style={{marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px'}}>
-              <h4>数据与知识库</h4>
-              <p>存储已用: {storageUsage}</p>
-              
-              {/* 修复点：用到 externalKnowledge 和 clearExternalKnowledge */}
-              <div style={{display: 'flex', gap: '8px', marginTop: '10px'}}>
-                <button onClick={loadExternalKnowledge}>加载外部知识库</button>
-                {externalKnowledge.length > 0 && (
-                  <button onClick={clearExternalKnowledge} style={{color: 'red'}}>卸载外部({externalKnowledge.length}条)</button>
-                )}
-              </div>
-              
-              <button style={{marginTop: '10px'}} onClick={() => { if(confirm('清空所有数据？')) { localStorage.clear(); location.reload(); } }}>重置所有数据</button>
+            <div className="settings-section">
+              <p>存储: {storageUsage} | 外部知识: {externalKnowledge.length}条</p>
+              <button onClick={loadExternalKnowledge}>加载外部知识库</button>
+              {externalKnowledge.length > 0 && <button onClick={clearExternalKnowledge}>卸载外部</button>}
             </div>
-            <button style={{marginTop: '20px', width: '100%'}} onClick={() => setShowSettings(false)}>确定</button>
+            <button onClick={() => setShowSettings(false)}>关闭</button>
           </div>
         </div>
       )}
