@@ -24,20 +24,6 @@ function App() {
     setStorageUsage((data.length / 1024).toFixed(1) + " KB")
   }, [docs, knowledge, messages])
 
-  const loadExternalKnowledge = () => {
-    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
-    inp.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        try { 
-          const entries = JSON.parse(await file.text()); 
-          setExternalKnowledge(Array.isArray(entries) ? entries : (entries.state?.knowledge || []));
-        } catch { alert('格式错误'); }
-      }
-    }
-    inp.click()
-  }
-
   const handleSend = async () => {
     if (!input.trim() || loading) return
     const userMsg = { role: 'user' as const, content: input }
@@ -51,12 +37,14 @@ function App() {
     setLoading(false)
   }
 
-  // 核心：在特定位置重新生成
-  const handleRegenerateAt = async (index: number) => {
+  // 重新生成逻辑：传入当前消息的索引
+  const handleRegenerate = async (index: number) => {
     if (loading) return
-    // 删除这条回复及之后的所有消息
+    // 1. 获取这条消息之前的历史
     const history = messages.slice(0, index)
+    // 2. 从 Store 中删掉这条回复及之后的内容
     removeMessagesFrom(index)
+    // 3. 重新请求
     setLoading(true)
     try {
       const reply = await sendToAI(history, aiSettings, currentDoc?.content)
@@ -86,7 +74,6 @@ function App() {
         <div className="sidebar-footer">
           <button onClick={() => setShowKnowledge(true)}>📖 知识库({knowledge.length})</button>
           <button onClick={() => setShowSettings(true)}>⚙️ 设置</button>
-          {currentDoc && <div className="export-btns"><button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>TXT</button><button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>Word</button></div>}
         </div>
       </aside>
 
@@ -101,7 +88,8 @@ function App() {
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
                         <button onClick={() => insertToEditor(msg.content)}>📝 插入</button>
-                        <button onClick={() => handleRegenerateAt(i)}>🔄 重新生成</button>
+                        {/* 重新生成按钮加在这里 */}
+                        <button onClick={() => handleRegenerate(i)}>🔄 重新生成</button>
                         <button onClick={() => setSaveDropdown(saveDropdown === `${i}` ? null : `${i}`)}>💾 存入知识库</button>
                         {saveDropdown === `${i}` && <div className="save-dropdown">{knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)}</div>}
                       </div>
@@ -110,7 +98,6 @@ function App() {
                 ))}
                 {loading && <div className="message assistant loading">思考中...</div>}
               </div>
-              {matchedKnowledge.length > 0 && <div style={{fontSize:'10px', color:'#999', padding:'2px 10px'}}>📎 匹配设定: {matchedKnowledge.map(k=>k.title).join(',')}</div>}
               <div className="chat-input">
                 <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {if(e.key === 'Enter' && !e.shiftKey){e.preventDefault(); handleSend();}}} placeholder="输入消息..." />
                 <button onClick={handleSend} disabled={loading}>发送</button>
@@ -127,11 +114,10 @@ function App() {
             <label>API Key<input type="password" value={aiSettings.apiKey} onChange={(e) => updateAISettings({ apiKey: e.target.value })} /></label>
             <label>模型<input value={aiSettings.model} onChange={(e) => updateAISettings({ model: e.target.value })} /></label>
             <div className="settings-section">
-              <p>存储: {storageUsage} | 外部知识: {externalKnowledge.length}条</p>
-              <button onClick={loadExternalKnowledge}>加载外部知识库</button>
-              {externalKnowledge.length > 0 && <button onClick={clearExternalKnowledge}>卸载外部</button>}
+                <p>存储: {storageUsage} | 外部知识: {externalKnowledge.length}条</p>
+                <button onClick={clearExternalKnowledge}>清空外部知识库</button>
             </div>
-            <button onClick={() => setShowSettings(false)}>关闭</button>
+            <button onClick={() => setShowSettings(false)}>确定</button>
           </div>
         </div>
       )}
