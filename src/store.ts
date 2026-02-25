@@ -52,7 +52,7 @@ export const useStore = create<Store>()(
       messages: [],
       aiSettings: {
         apiUrl: 'https://api.openai.com/v1/chat/completions',
-        apiKey: '',
+        apiKey: 'state.aiSettings.apiKey',
         model: 'gpt-4o-mini',
       },
       knowledge: [],
