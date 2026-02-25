@@ -35,20 +35,20 @@ export async function sendToAI(
     }
   }
 
-  // 1. 处理原始 URL
-  let targetUrl = settings.apiUrl.trim();
-  if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
-  if (!targetUrl.endsWith('/chat/completions')) {
-      targetUrl = targetUrl.replace(/\/$/, '') + '/v1/chat/completions';
+  // --- 彻底修复 Failed to Fetch 的逻辑 ---
+  let rawUrl = settings.apiUrl.trim();
+  if (!rawUrl.startsWith('http')) rawUrl = 'https://' + rawUrl;
+  if (!rawUrl.endsWith('/chat/completions')) {
+    rawUrl = rawUrl.replace(/\/$/, '') + '/v1/chat/completions';
   }
-  targetUrl = targetUrl.replace('/v1/v1', '/v1');
+  rawUrl = rawUrl.replace('/v1/v1', '/v1');
 
-  // 2. 【核心黑科技】使用公开代理服务绕过浏览器跨域限制
-  // 这样网页版就能像 Cherry Studio 一样访问任何公益站了
-  const finalUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+  // 使用代理服务绕过浏览器的跨域(CORS)限制
+  // 如果 max8.us.ci 拒绝了你的网页请求，通过这个代理就能成功
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
 
   try {
-    const res = await fetch(finalUrl, {
+    const res = await fetch(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,14 +65,13 @@ export async function sendToAI(
     })
 
     if (!res.ok) {
-        const errDetail = await res.text();
-        throw new Error(`API错误: ${res.status} ${errDetail}`);
+      const errorMsg = await res.text();
+      throw new Error(`API错误(${res.status}): ${errorMsg}`);
     }
-    
+
     const data = await res.json()
     return data.choices?.[0]?.message?.content || '无响应'
   } catch (err: any) {
-    console.error("请求失败:", err);
-    return `请求失败了。原因：${err.message}\n提示：请检查 API Key 是否正确。`;
+    throw new Error(err.message || "请求失败，请检查网络或 Key");
   }
 }
