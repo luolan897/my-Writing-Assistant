@@ -17,7 +17,7 @@ function App() {
   const [storageUsage, setStorageUsage] = useState('')
 
   const currentDoc = getCurrentDoc()
-  // 核心：这里使用了 matchedKnowledge，构建就不会报错了
+  // 必须在 JSX 中用到 matchedKnowledge
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
 
   useEffect(() => {
@@ -59,9 +59,9 @@ function App() {
       if (file) {
         try { 
           const entries = JSON.parse(await file.text()); 
-          // 核心：这里使用了 setExternalKnowledge
+          // 必须用到 setExternalKnowledge
           setExternalKnowledge(Array.isArray(entries) ? entries : []); 
-          alert('已加载外部知识库');
+          alert('外部知识库加载完成');
         } catch { alert('格式错误'); }
       }
     }
@@ -89,7 +89,7 @@ function App() {
           <button onClick={() => setShowSettings(true)}>⚙️ 设置</button>
           {currentDoc && (
             <div className="export-btns">
-              {/* 核心：这里使用了 exportToTxt 和 exportToWord */}
+               {/* 必须用到 exportToTxt 和 exportToWord */}
               <button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>导出TXT</button>
               <button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>导出Word</button>
             </div>
@@ -118,14 +118,14 @@ function App() {
                 ))}
                 {loading && <div className="message assistant loading">思考中...</div>}
               </div>
-              {/* 核心：这里显示 matchedKnowledge 解决编译错误 */}
-              {matchedKnowledge.length > 0 && <div className="matched-hint" style={{fontSize: '11px', color: '#888', padding: '5px 10px'}}>📎 参考：{matchedKnowledge.map(k=>k.title).join(', ')}</div>}
+              {/* 显示 matchedKnowledge 解决报错 */}
+              {matchedKnowledge.length > 0 && <div className="matched-hint" style={{fontSize:'10px', color:'#888', padding:'5px 10px'}}>📎 已匹配设定: {matchedKnowledge.length} 条</div>}
               <div className="chat-input">
                 <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {if(e.key === 'Enter' && !e.shiftKey){e.preventDefault(); handleSend();}}} placeholder="输入消息..." />
                 <button onClick={handleSend} disabled={loading}>发送</button>
               </div>
             </div></>
-        ) : <div className="empty-state"><h2>✨ 写作助手</h2><button onClick={() => {const t = prompt('标题:'); if(t) addDoc(t)}}>创建新文档开始</button></div>}
+        ) : <div className="empty-state"><h2>✨ 写作助手</h2><button onClick={() => {const t = prompt('标题:'); if(t) addDoc(t)}}>新建一个文档开始吧</button></div>}
       </main>
 
       {showSettings && (
@@ -137,9 +137,9 @@ function App() {
             <label>模型<input value={aiSettings.model} onChange={(e) => updateAISettings({ model: e.target.value })} /></label>
             <div className="settings-section">
                 <p>存储: {storageUsage} | 外部知识: {externalKnowledge.length}条</p>
-                {/* 核心：这里使用了 handleLoadExternal 和 clearExternalKnowledge */}
-                <button onClick={handleLoadExternal}>加载 JSON 知识库</button>
-                {externalKnowledge.length > 0 && <button onClick={clearExternalKnowledge}>清空外部知识库</button>}
+                {/* 使用 handleLoadExternal 和 clearExternalKnowledge 解决报错 */}
+                <button onClick={handleLoadExternal}>加载外部知识库</button>
+                <button onClick={clearExternalKnowledge}>卸载外部知识</button>
             </div>
             <button onClick={() => setShowSettings(false)}>确定</button>
           </div>
