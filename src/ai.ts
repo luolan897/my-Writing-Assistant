@@ -14,31 +14,26 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   const lastUserMsg = messages[messages.length - 1]?.content || ''
   const matched = getMatchedKnowledge(lastUserMsg)
 
-  let systemPrompt = `你是一个专业的小说写作助手。帮助用户进行创作、润色、分析角色、构思情节等。
-回答要简洁实用，直接给出建议或修改后的内容。`
-
+  let systemPrompt = `你是一个专业的小说写作助手。请根据资料直接给出建议或内容。`
   if (matched.length > 0) {
-    systemPrompt += '\n\n以下是相关的设定资料，请参考：\n'
-    matched.forEach((k) => { systemPrompt += `\n【${k.category}】${k.title}：\n${k.content}\n` })
+    systemPrompt += '\n参考资料：\n' + matched.map(k => `【${k.title}】:${k.content}`).join('\n')
   }
-
   if (currentContent) {
-    const plainText = currentContent.replace(/<[^>]*>/g, '').trim()
-    if (plainText.length > 0) systemPrompt += `\n\n当前文档内容：\n${plainText.slice(0, 3000)}`
+    systemPrompt += `\n当前文档内容：\n${currentContent.replace(/<[^>]*>/g, '').slice(0, 2000)}`
   }
 
-  // --- 跨域修复逻辑 ---
-  let rawUrl = settings.apiUrl.trim();
-  if (!rawUrl.startsWith('http')) rawUrl = 'https://' + rawUrl;
-  if (!rawUrl.endsWith('/chat/completions')) {
-      rawUrl = rawUrl.replace(/\/$/, '') + '/v1/chat/completions';
+  // 构造标准 OpenAI URL
+  let targetUrl = settings.apiUrl.trim();
+  if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
+  if (!targetUrl.endsWith('/chat/completions')) {
+    targetUrl = targetUrl.replace(/\/$/, '') + '/v1/chat/completions';
   }
-  rawUrl = rawUrl.replace('/v1/v1', '/v1');
+  targetUrl = targetUrl.replace('/v1/v1', '/v1');
 
-  // 使用代理绕过 CORS 限制
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+  // 使用另一个更稳的跨域中转地址
+  const finalUrl = `https://cors-anywhere.azm.workers.dev/${targetUrl}`;
 
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(finalUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -49,12 +44,12 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
       messages: [{ role: 'system', content: systemPrompt }, ...messages.map(m => ({role: m.role, content: m.content}))],
       stream: false
     }),
-  })
+  });
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`API错误(${res.status}): ${errText}`);
+    const txt = await res.text();
+    throw new Error(`API报错: ${res.status} - ${txt.slice(0, 50)}`);
   }
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content || '无响应'
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || 'AI无响应';
 }
