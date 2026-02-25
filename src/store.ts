@@ -16,7 +16,8 @@ interface Store {
   setCurrentDoc: (id: string) => void
   addMessage: (msg: Message) => void
   clearMessages: () => void
-  removeLastMessage: () => void // 新增
+  // 新增：删除某个索引及之后的所有消息
+  removeMessagesFrom: (index: number) => void
   updateAISettings: (settings: Partial<AISettings>) => void
   addKnowledge: (entry: Omit<KnowledgeEntry, 'id'>) => void
   updateKnowledge: (id: string, entry: Partial<KnowledgeEntry>) => void
@@ -49,7 +50,7 @@ export const useStore = create<Store>()(
       setCurrentDoc: (id) => set((s) => ({ currentDocId: id, messages: s.currentDocId !== id ? [] : s.messages })),
       addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
       clearMessages: () => set({ messages: [] }),
-      removeLastMessage: () => set((s) => ({ messages: s.messages.slice(0, -1) })),
+      removeMessagesFrom: (index) => set((s) => ({ messages: s.messages.slice(0, index) })),
       updateAISettings: (settings) => set((s) => ({ aiSettings: { ...s.aiSettings, ...settings } })),
       addKnowledge: (entry) => set((s) => ({ knowledge: [...s.knowledge, { ...entry, id: Date.now().toString() }] })),
       updateKnowledge: (id, entry) => set((s) => ({ knowledge: s.knowledge.map((k) => k.id === id ? { ...k, ...entry } : k) })),
@@ -64,7 +65,7 @@ export const useStore = create<Store>()(
         docs: state.docs,
         currentDocId: state.currentDocId,
         messages: state.messages,
-        aiSettings: state.aiSettings, // 保持 Key 持久化
+        aiSettings: state.aiSettings,
         knowledge: state.knowledge,
       })
     }
