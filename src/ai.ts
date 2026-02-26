@@ -13,13 +13,9 @@ export function getMatchedKnowledge(text: string): KnowledgeEntry[] {
 export async function sendToAI(messages: Message[], settings: AISettings, currentContent?: string): Promise<string> {
   const lastUserMsg = messages[messages.length - 1]?.content || ''
   const matched = getMatchedKnowledge(lastUserMsg)
-  let systemPrompt = `你是一个专业的小说写作助手。`
-  if (matched.length > 0) {
-    systemPrompt += '\n相关的设定资料：\n' + matched.map(k => `【${k.title}】：${k.content}`).join('\n')
-  }
-  if (currentContent) {
-    systemPrompt += `\n当前文档内容：\n${currentContent.replace(/<[^>]*>/g, '').slice(0, 3000)}`
-  }
+  let systemPrompt = `你是一个写作助手。`
+  if (matched.length > 0) systemPrompt += '\n参考资料：' + matched.map(k => k.content).join('\n')
+  if (currentContent) systemPrompt += `\n内容预览：${currentContent.replace(/<[^>]*>/g, '').slice(0, 1000)}`
 
   let finalUrl = settings.apiUrl.trim();
   if (!finalUrl.startsWith('http')) finalUrl = 'https://' + finalUrl;
@@ -34,10 +30,11 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
     body: JSON.stringify({
       model: settings.model.trim() || 'gpt-3.5-turbo',
       messages: [{ role: 'system', content: systemPrompt }, ...messages.map(m => ({role: m.role, content: m.content}))],
+      stream: false
     }),
   });
 
-  if (!res.ok) throw new Error(`API错误: ${res.status}`);
+  if (!res.ok) throw new Error(`API错误:${res.status}`);
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || '无响应';
+  return data.choices?.[0]?.message?.content || 'AI未响应';
 }
