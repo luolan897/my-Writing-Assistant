@@ -16,9 +16,9 @@ function App() {
   const [saveDropdown, setSaveDropdown] = useState<string | null>(null)
   const [storageUsage, setStorageUsage] = useState('')
   
-  // 用于编辑消息的状态
+  // 编辑用户消息
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
-  const [editInput, setEditInput] = useState('')
+  const [editValue, setEditValue] = useState('')
 
   const currentDoc = getCurrentDoc()
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
@@ -36,18 +36,33 @@ function App() {
       const reply = await sendToAI([...messages, userMsg], aiSettings, currentDoc?.content)
       addMessage({ role: 'assistant', content: reply })
     } catch (err: any) {
+      addMessage({ role: 'assistant', content: `请求失败: ${err.message}` })
+    }
+    setLoading(false)
+  }
+
+  // 修改并重发逻辑
+  const handleEditAndRegenerate = async (index: number) => {
+    if (loading) return
+    updateMessage(index, editValue)
+    const history = [...messages.slice(0, index), { role: 'user' as const, content: editValue }]
+    removeMessagesFrom(index + 1)
+    setEditingIdx(null)
+    setLoading(true)
+    try {
+      const reply = await sendToAI(history, aiSettings, currentDoc?.content)
+      addMessage({ role: 'assistant', content: reply })
+    } catch (err: any) {
       addMessage({ role: 'assistant', content: `错误: ${err.message}` })
     }
     setLoading(false)
   }
 
-  // 修改并重新生成逻辑
-  const handleUpdateAndRegenerate = async (index: number) => {
+  // 针对 AI 回复的重新生成逻辑
+  const handleRegenerateAI = async (index: number) => {
     if (loading) return
-    updateMessage(index, editInput)
-    const history = [...messages.slice(0, index), { role: 'user' as const, content: editInput }]
-    removeMessagesFrom(index + 1)
-    setEditingIdx(null)
+    const history = messages.slice(0, index)
+    removeMessagesFrom(index) // 删掉这一条回复
     setLoading(true)
     try {
       const reply = await sendToAI(history, aiSettings, currentDoc?.content)
@@ -65,7 +80,7 @@ function App() {
 
   return (
     <div className="app">
-      {/* 第一栏：侧边栏 */}
+      {/* 侧边栏 */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <h2>📚 文档</h2>
@@ -86,60 +101,45 @@ function App() {
           <button onClick={() => setShowKnowledge(true)}>📖 知识库 ({knowledge.length})</button>
           <button onClick={() => setShowSettings(true)}>⚙️ 设置</button>
           {currentDoc && <div className="export-btns">
-            <button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>TXT</button>
-            <button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>Word</button>
+            <button onClick={() => exportToTxt(currentDoc.title, currentDoc.content)}>导出TXT</button>
+            <button onClick={() => exportToWord(currentDoc.title, currentDoc.content)}>导出Word</button>
           </div>}
         </div>
       </aside>
 
-      {/* 核心容器：包含编辑器栏和聊天栏 */}
+      {/* 主体布局：编辑器 + 助手 */}
       <main className="main">
         {currentDoc ? (
           <>
-            {/* 第二栏：编辑器 */}
             <div className="editor-panel">
               <Editor content={currentDoc.content} onChange={(val) => updateDoc(currentDoc.id, val)} />
             </div>
-
-            {/* 第三栏：AI 助手聊天栏 */}
             <div className="chat-panel">
-              <div className="chat-header">
-                <span>🤖 AI 助手</span>
-                <button onClick={clearMessages}>清空</button>
-              </div>
+              <div className="chat-header"><span>🤖 AI 助手</span><button onClick={clearMessages}>清空</button></div>
               <div className="chat-messages">
-                {messages.length === 0 && (
-                  <div className="chat-hint">
-                    <p>💡 写作建议：</p>
-                    <ul><li>分析情绪</li><li>构思情节</li><li>润色对话</li></ul>
-                  </div>
-                )}
                 {messages.map((msg, i) => (
                   <div key={i} className={`message ${msg.role}`}>
                     <div className="message-content">
                       {editingIdx === i ? (
-                        <div className="edit-box-inline">
-                          <textarea value={editInput} onChange={(e)=>setEditInput(e.target.value)} style={{width:'100%', minHeight:'50px'}} />
-                          <div style={{display:'flex', gap:'5px', marginTop:'5px'}}>
-                            <button onClick={()=>handleUpdateAndRegenerate(i)}>重发</button>
-                            <button onClick={()=>setEditingIdx(null)}>取消</button>
-                          </div>
+                        <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                          <textarea value={editValue} onChange={(e)=>setEditValue(e.target.value)} style={{width:'100%', minHeight:'50px'}} />
+                          <div style={{display:'flex', gap:'5px'}}><button onClick={()=>handleEditAndRegenerate(i)}>重发</button><button onClick={()=>setEditingIdx(null)}>取消</button></div>
                         </div>
                       ) : (
                         <>
                           {msg.content}
-                          {msg.role === 'user' && <span className="msg-edit-icon" onClick={()=>{setEditingIdx(i); setEditInput(msg.content)}} style={{cursor:'pointer', marginLeft:'8px', opacity:0.4}}>✏️</span>}
+                          {msg.role === 'user' && <span onClick={()=>{setEditingIdx(i); setEditValue(msg.content)}} style={{cursor:'pointer', marginLeft:'8px', opacity:0.3}}>✏️</span>}
                         </>
                       )}
                     </div>
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
                         <button className="insert-btn" onClick={() => insertToEditor(msg.content)}>📝 插入</button>
+                        {/* 重新生成按钮加在这里 */}
+                        <button onClick={() => handleRegenerateAI(i)}>🔄 重新生成</button>
                         <button className="save-btn" onClick={() => setSaveDropdown(saveDropdown === `${i}` ? null : `${i}`)}>💾 存</button>
                         {saveDropdown === `${i}` && (
-                          <div className="save-dropdown">
-                            {knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)}
-                          </div>
+                          <div className="save-dropdown">{knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)}</div>
                         )}
                       </div>
                     )}
@@ -154,9 +154,7 @@ function App() {
               </div>
             </div>
           </>
-        ) : (
-          <div className="empty-state"><h2>✨ 写作助手</h2><button onClick={() => {const t=prompt('标题:'); if(t) addDoc(t)}}>新文档</button></div>
-        )}
+        ) : <div className="empty-state"><h2>✨ 写作助手</h2><button onClick={() => {const t=prompt('标题:'); if(t) addDoc(t)}}>新文档</button></div>}
       </main>
 
       {/* 设置弹窗 */}
@@ -168,9 +166,9 @@ function App() {
             <label>API Key<input type="password" value={aiSettings.apiKey} onChange={(e) => updateAISettings({ apiKey: e.target.value })} /></label>
             <label>模型<input value={aiSettings.model} onChange={(e) => updateAISettings({ model: e.target.value })} /></label>
             <div className="settings-section">
-                <p>存储: {storageUsage} | 外部: {externalKnowledge.length}</p>
-                <button onClick={() => { const inp=document.createElement('input'); inp.type='file'; inp.onchange=async(e)=>{const f=(e.target as any).files[0]; if(f) setExternalKnowledge(JSON.parse(await f.text()))}; inp.click(); }}>加载知识库</button>
-                <button onClick={clearExternalKnowledge}>清空外部</button>
+                <p>存储: {storageUsage} | 外部知识: {externalKnowledge.length}</p>
+                <button onClick={() => { const inp=document.createElement('input'); inp.type='file'; inp.onchange=async(e)=>{const f=(e.target as any).files[0]; if(f) setExternalKnowledge(JSON.parse(await f.text()))}; inp.click(); }}>加载外部知识库</button>
+                <button onClick={clearExternalKnowledge}>卸载外部知识</button>
             </div>
             <button onClick={() => setShowSettings(false)}>确定</button>
           </div>
