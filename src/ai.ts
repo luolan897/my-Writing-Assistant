@@ -15,14 +15,9 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   const matched = getMatchedKnowledge(lastUserMsg)
 
   let systemPrompt = `你是一个写作助手。`
-  if (matched.length > 0) {
-    systemPrompt += '\n参考资料：\n' + matched.map(k => k.content).join('\n')
-  }
-  if (currentContent) {
-    systemPrompt += `\n文档内容：${currentContent.replace(/<[^>]*>/g, '').slice(0, 1000)}`
-  }
+  if (matched.length > 0) systemPrompt += '\n参考资料：\n' + matched.map(k => k.content).join('\n')
+  if (currentContent) systemPrompt += `\n文档内容：${currentContent.replace(/<[^>]*>/g, '').slice(0, 1000)}`
 
-  // 构建标准直连 URL
   let finalUrl = settings.apiUrl.trim();
   if (!finalUrl.startsWith('http')) finalUrl = 'https://' + finalUrl;
   if (!finalUrl.endsWith('/chat/completions')) {
@@ -30,7 +25,6 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   }
   finalUrl = finalUrl.replace('/v1/v1', '/v1');
 
-  // 直接 fetch，不再使用代理
   const res = await fetch(finalUrl, {
     method: 'POST',
     headers: {
@@ -45,8 +39,13 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `API错误码:${res.status}`);
+    const errText = await res.text();
+    try {
+      const errObj = JSON.parse(errText);
+      throw new Error(errObj.error?.message || errObj.message || `API码:${res.status}`);
+    } catch {
+      throw new Error(errText.slice(0, 100) || `API状态码:${res.status}`);
+    }
   }
   const data = await res.json();
   return data.choices?.[0]?.message?.content || 'AI无响应';
