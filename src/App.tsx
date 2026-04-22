@@ -10,7 +10,7 @@ function App() {
   const { 
     docs, currentDocId, messages, aiProviders, activeProviderId, knowledge, 
     addDoc, updateDoc, renameDoc, deleteDoc, setCurrentDoc, addMessage, clearMessages, 
-    removeMessagesFrom, addAIProvider, updateAIProvider, deleteAIProvider, 
+    removeMessagesFrom, updateMessage, addAIProvider, updateAIProvider, deleteAIProvider, 
     setActiveProvider, appendToKnowledge
   } = useStore()
   
@@ -21,6 +21,10 @@ function App() {
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [saveDropdown, setSaveDropdown] = useState<string | null>(null)
   const [storageUsage, setStorageUsage] = useState('')
+
+  // 新增：编辑消息的状态
+  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [editValue, setEditValue] = useState('')
 
   const currentDoc = getCurrentDoc()
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
@@ -44,10 +48,28 @@ function App() {
     setLoading(false)
   }
 
+  // 核心功能：重新生成 (AI 回复)
   const handleRegenerateAI = async (index: number) => {
     if (loading) return
     const history = messages.slice(0, index)
     removeMessagesFrom(index)
+    setLoading(true)
+    try {
+      const reply = await sendToAI(history, null, currentDoc?.content)
+      addMessage({ role: 'assistant', content: reply })
+    } catch (err: any) {
+      addMessage({ role: 'assistant', content: `错误: ${err.message}` })
+    }
+    setLoading(false)
+  }
+
+  // 核心功能：修改用户消息并重发
+  const handleEditSubmit = async (index: number) => {
+    if (!editValue.trim() || loading) return
+    updateMessage(index, editValue) // 更新那条消息的内容
+    const history = [...messages.slice(0, index), { role: 'user' as const, content: editValue }]
+    removeMessagesFrom(index + 1) // 删除旧的 AI 回复
+    setEditingIdx(null)
     setLoading(true)
     try {
       const reply = await sendToAI(history, null, currentDoc?.content)
@@ -110,7 +132,24 @@ function App() {
               <div className="chat-messages">
                 {messages.map((msg, i) => (
                   <div key={i} className={`message ${msg.role}`}>
-                    <div className="message-content">{msg.content}</div>
+                    <div className="message-content">
+                        {editingIdx === i ? (
+                          <div className="edit-box">
+                            <textarea value={editValue} onChange={(e) => setEditValue(e.target.value)} />
+                            <div className="edit-btns">
+                              <button onClick={() => handleEditSubmit(i)}>保存并重发</button>
+                              <button onClick={() => setEditingIdx(null)}>取消</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {msg.content}
+                            {msg.role === 'user' && (
+                              <button className="edit-icon" onClick={() => { setEditingIdx(i); setEditValue(msg.content); }} title="修改">✏️</button>
+                            )}
+                          </>
+                        )}
+                    </div>
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
                         <button className="insert-btn" onClick={() => insertToEditor(msg.content)}>📝 插入</button>
@@ -173,7 +212,7 @@ function App() {
               </div>
               <div className="form-group">
                 <label>模型名称</label>
-                <input value={activeProvider.model} placeholder="gpt-4o" onChange={e => updateAIProvider(activeProviderId, { model: e.target.value })} />
+                <input value={activeProvider.model} placeholder="gpt-4" onChange={e => updateAIProvider(activeProviderId, { model: e.target.value })} />
               </div>
               <div className="settings-footer">
                 <span>存储: {storageUsage}</span>
