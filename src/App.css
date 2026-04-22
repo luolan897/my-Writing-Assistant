@@ -1,48 +1,11 @@
-/* 添加或覆盖原有 App.css */
-.app {
-  display: flex;
-  height: 100vh;
-  background: #f1f5f9;
-}
-.sidebar { width: 280px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
-.main { flex: 1; display: flex; overflow: hidden; }
-
-.chat-header {
-  padding: 15px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.model-select {
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  font-size: 12px;
-}
-
-.settings-modal {
-  width: 700px !important;
-  height: 450px !important;
-  padding: 0 !important;
-  display: flex !important;
-  flex-direction: row !important;
-  overflow: hidden;
-}
-.settings-sidebar {
-  width: 180px;
-  background: #f8fafc;
-  border-right: 1px solid #e2e8f0;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-}
-.provider-list { list-style: none; flex: 1; overflow-y: auto; }
-.provider-list li { padding: 8px; cursor: pointer; border-radius: 4px; font-size: 13px; margin-bottom: 4px; }
+.model-select { margin-left: 8px; font-size: 12px; }
+.settings-modal { width: 700px !important; display: flex !important; flex-direction: row !important; padding: 0 !important; }
+.settings-sidebar { width: 180px; background: #f8fafc; padding: 15px; border-right: 1px solid #eee; }
+.provider-list { list-style: none; }
+.provider-list li { padding: 8px; cursor: pointer; border-radius: 4px; }
 .provider-list li.active { background: #34d399; color: white; }
-.settings-main { flex: 1; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
-.settings-main label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #64748b; }
-.settings-main input { padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; }
-.settings-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
-.btn-del { background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; }
-.btn-confirm { background: #34d399; color: white; border: none; padding: 8px 20px; border-radius: 6px; }
+.settings-main { flex: 1; padding: 25px; display: flex; flex-direction: column; gap: 10px; }
+.settings-main label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.settings-main input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.footer-btns { margin-top: auto; display: flex; gap: 10px; justify-content: space-between; }
+.btn-del { color: red; cursor: pointer; }
