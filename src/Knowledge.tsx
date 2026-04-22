@@ -28,7 +28,7 @@ export function Knowledge({ onClose }: { onClose: () => void }) {
 
   const handleExport = () => {
     if (knowledge.length === 0) return alert('知识库为空')
-    const ok = window.confirm('确认导出知识库备份(JSON)吗？取消则导出阅读文档(TXT)')
+    const ok = window.confirm('确认导出备份(JSON)吗？取消则导出文档(TXT)')
     if (ok) exportKnowledgeToJSON(knowledge)
     else exportKnowledgeToTxt(knowledge)
   }
