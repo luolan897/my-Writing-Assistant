@@ -4,7 +4,6 @@ import { sendToAI } from './ai'
 import './ImportAnalyze.css'
 
 export function ImportAnalyze({ onClose }: { onClose: () => void }) {
-  // 修改这里：移除了 aiSettings
   const { addKnowledge } = useStore()
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -14,7 +13,6 @@ export function ImportAnalyze({ onClose }: { onClose: () => void }) {
     setLoading(true)
     try {
       const prompt = `请分析以下文本，提取其中的人物、地理、势力设定，以JSON数组格式返回，每个对象包含 category(分类), title(标题), keywords(关键词数组), content(内容) 字段：\n\n${text}`
-      // 注意：sendToAI 现在不需要传入第二个参数了，它内部会自动获取
       const reply = await sendToAI([{ role: 'user', content: prompt }], null)
       const jsonStr = reply.match(/\[[\s\S]*\]/)?.[0]
       if (jsonStr) {
