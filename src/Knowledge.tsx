@@ -3,6 +3,7 @@ import { useStore } from './store'
 import type { KnowledgeEntry } from './types'
 import { ImportAnalyze } from './ImportAnalyze'
 import { LongTextImport } from './LongTextImport'
+import { exportKnowledgeToTxt, exportKnowledgeToJSON } from './export'
 import './Knowledge.css'
 
 const CATEGORIES: KnowledgeEntry['category'][] = ['人物', '世界观', '剧情', '设定', '其他']
@@ -42,6 +43,19 @@ export function Knowledge({ onClose }: { onClose: () => void }) {
     setEditing(false)
   }
 
+  const handleExport = () => {
+    if (knowledge.length === 0) {
+      alert('知识库暂无内容')
+      return
+    }
+    const mode = window.confirm('点击“确定”导出 JSON 备份文件（可用于迁移恢复）\n点击“取消”导出 TXT 文档（用于阅读参考）')
+    if (mode) {
+      exportKnowledgeToJSON(knowledge)
+    } else {
+      exportKnowledgeToTxt(knowledge)
+    }
+  }
+
   return (
     <div className="knowledge-modal">
       <div className="knowledge-container">
@@ -50,6 +64,7 @@ export function Knowledge({ onClose }: { onClose: () => void }) {
           <div className="knowledge-header">
             <h3>知识库</h3>
             <div className="header-actions">
+              <button className="btn-export" title="导出" onClick={handleExport}>导出</button>
               <button className="btn-import" onClick={() => setShowLongImport(true)}>长文</button>
               <button className="btn-import" onClick={() => setShowImport(true)}>导入</button>
               <button className="btn-new" onClick={handleNew}>+ 新建</button>
