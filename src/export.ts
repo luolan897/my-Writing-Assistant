@@ -1,5 +1,4 @@
 import { saveAs } from 'file-saver'
-// 修改这一行，加上 type 关键字
 import type { KnowledgeEntry } from './types'
 
 function htmlToPlainText(html: string): string {
