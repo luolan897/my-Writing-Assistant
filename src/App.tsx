@@ -22,7 +22,6 @@ function App() {
   const [saveDropdown, setSaveDropdown] = useState<string | null>(null)
   const [storageUsage, setStorageUsage] = useState('')
 
-  // 新增：编辑消息的状态
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -48,7 +47,6 @@ function App() {
     setLoading(false)
   }
 
-  // 核心功能：重新生成 (AI 回复)
   const handleRegenerateAI = async (index: number) => {
     if (loading) return
     const history = messages.slice(0, index)
@@ -63,12 +61,11 @@ function App() {
     setLoading(false)
   }
 
-  // 核心功能：修改用户消息并重发
   const handleEditSubmit = async (index: number) => {
     if (!editValue.trim() || loading) return
-    updateMessage(index, editValue) // 更新那条消息的内容
+    updateMessage(index, editValue)
     const history = [...messages.slice(0, index), { role: 'user' as const, content: editValue }]
-    removeMessagesFrom(index + 1) // 删除旧的 AI 回复
+    removeMessagesFrom(index + 1)
     setEditingIdx(null)
     setLoading(true)
     try {
