@@ -1,3 +1,5 @@
+// src/App.tsx 中的主要修改点（你可以直接全选替换整个文件）
+
 import { useState, useEffect } from 'react'
 import { useStore, getCurrentDoc } from './store'
 import { sendToAI, getMatchedKnowledge } from './ai'
@@ -44,10 +46,15 @@ function App() {
     setLoading(false)
   }
 
+  // 核心功能：重新生成
   const handleRegenerateAI = async (index: number) => {
     if (loading) return
+    // 1. 获取这条 AI 回复之前的所有消息作为历史
     const history = messages.slice(0, index)
-    removeMessagesFrom(index); setLoading(true)
+    // 2. 从 Store 中移除这条消息（及之后的消息）
+    removeMessagesFrom(index)
+    // 3. 重新开始加载并发送请求
+    setLoading(true)
     try {
       const reply = await sendToAI(history, null, currentDoc?.content)
       addMessage({ role: 'assistant', content: reply })
@@ -111,10 +118,17 @@ function App() {
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
                         <button className="insert-btn" onClick={() => insertToEditor(msg.content)}>📝 插入</button>
-                        <button onClick={() => handleRegenerateAI(i)}>🔄 重新生成</button>
+                        {/* 这里是新增的重新生成按钮 */}
+                        <button className="regen-btn" onClick={() => handleRegenerateAI(i)} title="重新生成">🔄 重发</button>
                         <button className="save-btn" onClick={() => setSaveDropdown(saveDropdown === `${i}` ? null : `${i}`)}>💾 存</button>
                         {saveDropdown === `${i}` && (
-                          <div className="save-dropdown">{knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)}</div>
+                          <div className="save-dropdown">
+                            {knowledge.length > 0 ? (
+                              knowledge.map(k => <button key={k.id} onClick={() => { appendToKnowledge(k.id, msg.content); setSaveDropdown(null) }}>{k.title}</button>)
+                            ) : (
+                              <div className="no-knowledge">请先去知识库新建条目</div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -137,47 +151,4 @@ function App() {
           <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="settings-sidebar">
               <h4>模型配置</h4>
-              <button className="btn-add" onClick={() => addAIProvider('新配置')}>+ 添加</button>
-              <ul className="provider-list">
-                {aiProviders.map(p => (
-                  <li key={p.id} className={p.id === activeProviderId ? 'active' : ''} onClick={() => setActiveProvider(p.id)}>
-                    {p.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="settings-main">
-              <button className="btn-close-x" onClick={() => setShowSettings(false)}>×</button>
-              <h3>编辑: {activeProvider.name}</h3>
-              <div className="form-group">
-                <label>配置名称</label>
-                <input value={activeProvider.name} onChange={e => updateAIProvider(activeProviderId, { name: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>API URL</label>
-                <input value={activeProvider.apiUrl} placeholder="https://yukiapi.sylu.cc/v1" onChange={e => updateAIProvider(activeProviderId, { apiUrl: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>API Key</label>
-                <input type="password" value={activeProvider.apiKey} onChange={e => updateAIProvider(activeProviderId, { apiKey: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>模型</label>
-                <input value={activeProvider.model} placeholder="gpt-5-codex" onChange={e => updateAIProvider(activeProviderId, { model: e.target.value })} />
-              </div>
-              <div className="settings-footer">
-                <span>存储: {storageUsage}</span>
-                <div className="footer-btns">
-                  <button className="btn-del" onClick={() => deleteAIProvider(activeProviderId)}>删除配置</button>
-                  <button className="btn-confirm" onClick={() => setShowSettings(false)}>完成</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showKnowledge && <Knowledge onClose={() => setShowKnowledge(false)} />}
-    </div>
-  )
-}
-export default App
+              <button className="btn-add" onClick={() => addAI
