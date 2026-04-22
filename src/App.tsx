@@ -21,7 +21,6 @@ function App() {
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [saveDropdown, setSaveDropdown] = useState<string | null>(null)
   const [storageUsage, setStorageUsage] = useState('')
-  
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -153,19 +152,30 @@ function App() {
               </ul>
             </div>
             <div className="settings-main">
+              <button className="btn-close-x" onClick={() => setShowSettings(false)}>×</button>
               <h3>编辑: {activeProvider.name}</h3>
-              <label>配置名称<input value={activeProvider.name} onChange={e => updateAIProvider(activeProviderId, { name: e.target.value })} /></label>
-              <label>API URL<input value={activeProvider.apiUrl} onChange={e => updateAIProvider(activeProviderId, { apiUrl: e.target.value })} /></label>
-              <label>API Key<input type="password" value={activeProvider.apiKey} onChange={e => updateAIProvider(activeProviderId, { apiKey: e.target.value })} /></label>
-              <label>模型名称<input value={activeProvider.model} onChange={e => updateAIProvider(activeProviderId, { model: e.target.value })} /></label>
-              <div className="settings-footer">
-                <p>存储: {storageUsage}</p>
-                <button className="btn-del" onClick={() => deleteAIProvider(activeProviderId)}>删除</button>
-                <button className="btn-confirm" onClick={() => setShowSettings(false)}>完成</button>
+              <div className="form-group">
+                <label>配置名称</label>
+                <input value={activeProvider.name} onChange={e => updateAIProvider(activeProviderId, { name: e.target.value })} />
               </div>
-              <div className="external-section">
-                <button onClick={() => { const inp=document.createElement('input'); inp.type='file'; inp.onchange=async(e)=>{const f=(e.target as any).files[0]; if(f) setExternalKnowledge(JSON.parse(await f.text()))}; inp.click(); }}>加载外部知识库</button>
-                <button onClick={clearExternalKnowledge}>卸载</button>
+              <div className="form-group">
+                <label>API URL</label>
+                <input value={activeProvider.apiUrl} placeholder="https://yukiapi.sylu.cc/v1" onChange={e => updateAIProvider(activeProviderId, { apiUrl: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>API Key</label>
+                <input type="password" value={activeProvider.apiKey} onChange={e => updateAIProvider(activeProviderId, { apiKey: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>模型</label>
+                <input value={activeProvider.model} placeholder="gpt-5-codex" onChange={e => updateAIProvider(activeProviderId, { model: e.target.value })} />
+              </div>
+              <div className="settings-footer">
+                <span>存储: {storageUsage}</span>
+                <div className="footer-btns">
+                  <button className="btn-del" onClick={() => deleteAIProvider(activeProviderId)}>删除配置</button>
+                  <button className="btn-confirm" onClick={() => setShowSettings(false)}>完成</button>
+                </div>
               </div>
             </div>
           </div>
@@ -175,5 +185,4 @@ function App() {
     </div>
   )
 }
-
 export default App
