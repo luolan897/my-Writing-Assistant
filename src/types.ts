@@ -17,9 +17,11 @@ export interface Message {
   content: string              // 消息内容
 }
 
-// AI设置类型
+// AI设置类型 (单个配置项)
 export interface AISettings {
-  apiUrl: string   // API地址（兼容OpenAI格式）
+  id: string       // 配置唯一标识
+  name: string     // 配置名称，如 "我的CPA" 或 "DeepSeek"
+  apiUrl: string   // API地址
   apiKey: string   // API密钥
   model: string    // 模型名称
 }
