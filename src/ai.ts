@@ -1,4 +1,4 @@
-import type { Message, AISettings, KnowledgeEntry } from './types'
+import type { Message, KnowledgeEntry } from './types'
 import { useStore } from './store'
 
 export function getMatchedKnowledge(text: string): KnowledgeEntry[] {
@@ -10,7 +10,12 @@ export function getMatchedKnowledge(text: string): KnowledgeEntry[] {
   })
 }
 
-export async function sendToAI(messages: Message[], settings: AISettings, currentContent?: string): Promise<string> {
+export async function sendToAI(messages: Message[], _ignored: any, currentContent?: string): Promise<string> {
+  const { aiProviders, activeProviderId } = useStore.getState()
+  const settings = aiProviders.find(p => p.id === activeProviderId) || aiProviders[0]
+
+  if (!settings.apiUrl) throw new Error('请先在设置中配置 AI 服务地址')
+
   const lastUserMsg = messages[messages.length - 1]?.content || ''
   const matched = getMatchedKnowledge(lastUserMsg)
   
@@ -18,61 +23,31 @@ export async function sendToAI(messages: Message[], settings: AISettings, curren
   if (matched.length > 0) systemPrompt += '\n参考资料：' + matched.map(k => k.content).join('\n')
   if (currentContent) systemPrompt += `\n内容预览：${currentContent.replace(/<[^>]*>/g, '').slice(0, 1000)}`
 
-  // 1. 严格处理 URL（模拟 Cherry Studio 的逻辑）
-  let baseUrl = settings.apiUrl.trim();
-  if (!baseUrl.startsWith('http')) baseUrl = 'https://' + baseUrl;
-  
-  // 移除所有末尾斜杠
-  baseUrl = baseUrl.replace(/\/+$/, '');
-
-  // 确保最终路径包含 /chat/completions
-  let finalUrl = baseUrl;
+  // 规范化 URL
+  let baseUrl = settings.apiUrl.trim().replace(/\/+$/, '')
+  if (!baseUrl.startsWith('http')) baseUrl = 'https://' + baseUrl
+  let finalUrl = baseUrl
   if (!finalUrl.endsWith('/chat/completions')) {
-    if (finalUrl.endsWith('/v1')) {
-      finalUrl += '/chat/completions';
-    } else {
-      finalUrl += '/v1/chat/completions';
-    }
+    finalUrl = finalUrl.endsWith('/v1') ? `${finalUrl}/chat/completions` : `${finalUrl}/v1/chat/completions`
   }
 
-  // 2. 构造请求体
-  const body = {
-    model: settings.model.trim() || 'gpt-3.5-turbo',
-    messages: [
-      { role: 'system', content: systemPrompt }, 
-      ...messages.map(m => ({ role: m.role, content: m.content }))
-    ],
-    stream: false
-  };
+  const res = await fetch(finalUrl, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json', 
+      'Authorization': `Bearer ${settings.apiKey.trim()}` 
+    },
+    body: JSON.stringify({
+      model: settings.model.trim() || 'gpt-3.5-turbo',
+      messages: [{ role: 'system', content: systemPrompt }, ...messages.map(m => ({role: m.role, content: m.content}))],
+      stream: false
+    }),
+  })
 
-  try {
-    const res = await fetch(finalUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.apiKey.trim() || 'sk-dummy'}`,
-      },
-      body: JSON.stringify(body),
-      // 设置为 cors 模式
-      mode: 'cors',
-    });
-
-    if (!res.ok) {
-      const errDetail = await res.text();
-      throw new Error(`HTTP ${res.status}: ${errDetail || '未知错误'}`);
-    }
-
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || 'AI 未返回有效回复';
-
-  } catch (error: any) {
-    console.error('AI Request Error:', error);
-
-    // 错误类型判断
-    if (error.message.includes('Failed to fetch')) {
-      return `【网络/跨域错误】\n1. 请检查 Render 地址是否填错：${finalUrl}\n2. CPA 服务可能没允许跨域 (CORS)。\n3. Render 正在休眠，请稍后再试。`;
-    }
-    
-    return `AI 响应失败：${error.message}`;
+  if (!res.ok) {
+    const errText = await res.text()
+    throw new Error(`API错误 ${res.status}: ${errText}`)
   }
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content || 'AI未响应'
 }
