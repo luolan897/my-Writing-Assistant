@@ -37,9 +37,9 @@ interface Store {
 const DEFAULT_PROVIDER: AISettings = {
   id: 'default',
   name: '默认配置',
-  apiUrl: 'https://api.openai.com/v1',
-  apiKey: '',
-  model: 'gpt-4o-mini',
+  apiUrl: 'https://yukiapi.sylu.cc/v1',
+  apiKey: 'sk-dummy',
+  model: 'gpt-5-codex',
 }
 
 export const useStore = create<Store>()(
@@ -49,36 +49,21 @@ export const useStore = create<Store>()(
       currentDocId: null,
       messages: [],
       
-      // --- 多模型管理实现 ---
       aiProviders: [DEFAULT_PROVIDER],
       activeProviderId: 'default',
       
       addAIProvider: (name) => set((s) => {
-        const newProvider: AISettings = {
-          id: Date.now().toString(),
-          name: name,
-          apiUrl: '',
-          apiKey: '',
-          model: '',
-        }
-        return { aiProviders: [...s.aiProviders, newProvider], activeProviderId: newProvider.id }
+        const newP: AISettings = { id: Date.now().toString(), name, apiUrl: '', apiKey: '', model: '' }
+        return { aiProviders: [...s.aiProviders, newP], activeProviderId: newP.id }
       }),
-
       updateAIProvider: (id, settings) => set((s) => ({
         aiProviders: s.aiProviders.map(p => p.id === id ? { ...p, ...settings } : p)
       })),
-
       deleteAIProvider: (id) => set((s) => {
         const newProviders = s.aiProviders.filter(p => p.id !== id)
-        const newActiveId = s.activeProviderId === id 
-          ? (newProviders[0]?.id || 'default') 
-          : s.activeProviderId
-        return { 
-          aiProviders: newProviders.length > 0 ? newProviders : [DEFAULT_PROVIDER],
-          activeProviderId: newActiveId
-        }
+        const nextId = s.activeProviderId === id ? (newProviders[0]?.id || 'default') : s.activeProviderId
+        return { aiProviders: newProviders.length > 0 ? newProviders : [DEFAULT_PROVIDER], activeProviderId: nextId }
       }),
-
       setActiveProvider: (id) => set({ activeProviderId: id }),
 
       knowledge: [],
