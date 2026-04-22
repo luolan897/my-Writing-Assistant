@@ -8,10 +8,10 @@ import './App.css'
 
 function App() {
   const { 
-    docs, currentDocId, messages, aiProviders, activeProviderId, knowledge, externalKnowledge,
+    docs, currentDocId, messages, aiProviders, activeProviderId, knowledge, 
     addDoc, updateDoc, renameDoc, deleteDoc, setCurrentDoc, addMessage, clearMessages, 
-    removeMessagesFrom, updateMessage, addAIProvider, updateAIProvider, deleteAIProvider, 
-    setActiveProvider, appendToKnowledge, setExternalKnowledge, clearExternalKnowledge 
+    removeMessagesFrom, addAIProvider, updateAIProvider, deleteAIProvider, 
+    setActiveProvider, appendToKnowledge
   } = useStore()
   
   const [input, setInput] = useState('')
@@ -21,8 +21,6 @@ function App() {
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [saveDropdown, setSaveDropdown] = useState<string | null>(null)
   const [storageUsage, setStorageUsage] = useState('')
-  const [editingIdx, setEditingIdx] = useState<number | null>(null)
-  const [editValue, setEditValue] = useState('')
 
   const currentDoc = getCurrentDoc()
   const matchedKnowledge = input ? getMatchedKnowledge(input) : []
@@ -109,10 +107,7 @@ function App() {
               <div className="chat-messages">
                 {messages.map((msg, i) => (
                   <div key={i} className={`message ${msg.role}`}>
-                    <div className="message-content">
-                        {msg.content}
-                        {msg.role === 'user' && <span onClick={()=>{setEditingIdx(i); setEditValue(msg.content)}} style={{cursor:'pointer', marginLeft:'8px', opacity:0.3}}>✏️</span>}
-                    </div>
+                    <div className="message-content">{msg.content}</div>
                     {msg.role === 'assistant' && (
                       <div className="message-actions">
                         <button className="insert-btn" onClick={() => insertToEditor(msg.content)}>📝 插入</button>
