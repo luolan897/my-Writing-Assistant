@@ -2,19 +2,17 @@
  * 类型定义文件
  */
 
-// 文档类型
 export interface Doc {
-  id: string           // 唯一标识
-  title: string        // 文档标题
-  content: string      // 文档内容（HTML格式）
-  createdAt: number    // 创建时间戳
-  updatedAt: number    // 更新时间戳
+  id: string
+  title: string
+  content: string
+  createdAt: number
+  updatedAt: number
 }
 
-// 对话消息类型
 export interface Message {
-  role: 'user' | 'assistant'  // 角色：用户或AI助手
-  content: string              // 消息内容
+  role: 'user' | 'assistant'
+  content: string
 }
 
 // AI设置类型 (单个配置项)
@@ -26,11 +24,10 @@ export interface AISettings {
   model: string    // 模型名称
 }
 
-// 知识库条目类型
 export interface KnowledgeEntry {
-  id: string                                              // 唯一标识
-  category: '人物' | '世界观' | '剧情' | '设定' | '其他'   // 分类
-  title: string                                           // 标题
-  keywords: string[]                                      // 关键词列表（用于AI自动匹配）
-  content: string                                         // 详细内容
+  id: string
+  category: '人物' | '世界观' | '剧情' | '设定' | '其他'
+  title: string
+  keywords: string[]
+  content: string
 }
