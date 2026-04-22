@@ -16,6 +16,7 @@ interface Store {
   deleteDoc: (id: string) => void
   setCurrentDoc: (id: string) => void
   addMessage: (msg: Message) => void
+  updateMessage: (index: number, content: string) => void // 必须有这一行
   clearMessages: () => void
   removeMessagesFrom: (index: number) => void
   addAIProvider: (name: string) => void
@@ -57,6 +58,10 @@ export const useStore = create<Store>()(
       deleteDoc: (id) => set((s) => ({ docs: s.docs.filter((d) => d.id !== id), currentDocId: s.currentDocId === id ? null : s.currentDocId, messages: s.currentDocId === id ? [] : s.messages })),
       setCurrentDoc: (id) => set((s) => ({ currentDocId: id, messages: s.currentDocId !== id ? [] : s.messages })),
       addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+      // 补全这个方法实现
+      updateMessage: (index, content) => set((s) => ({
+        messages: s.messages.map((m, i) => i === index ? { ...m, content } : m)
+      })),
       clearMessages: () => set({ messages: [] }),
       removeMessagesFrom: (index) => set((s) => ({ messages: s.messages.slice(0, index) })),
       addAIProvider: (name) => set((s) => {
