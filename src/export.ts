@@ -3,6 +3,7 @@
  * 支持导出为 TXT 和 Word 格式
  */
 import { saveAs } from 'file-saver'
+import type { KnowledgeEntry } from './types'
 
 /**
  * 将 HTML 内容转换为纯文本
@@ -50,4 +51,28 @@ export function exportToWord(title: string, content: string) {
   `
   const blob = new Blob([html], { type: 'application/msword' })
   saveAs(blob, `${title}.doc`)
+}
+
+/**
+ * 导出知识库为 TXT (人类阅读格式)
+ */
+export function exportKnowledgeToTxt(knowledge: KnowledgeEntry[]) {
+  const text = knowledge.map(k => (
+    `【${k.category}】${k.title}\n` +
+    `关键词: ${k.keywords.join(', ')}\n` +
+    `内容:\n${k.content}\n` +
+    `----------------------------`
+  )).join('\n\n')
+  
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+  saveAs(blob, `知识库导出_${new Date().toLocaleDateString()}.txt`)
+}
+
+/**
+ * 导出知识库为 JSON (数据备份格式，可用于导入)
+ */
+export function exportKnowledgeToJSON(knowledge: KnowledgeEntry[]) {
+  const data = JSON.stringify(knowledge, null, 2)
+  const blob = new Blob([data], { type: 'application/json;charset=utf-8' })
+  saveAs(blob, `知识库备份_${new Date().toLocaleDateString()}.json`)
 }
