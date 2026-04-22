@@ -1,5 +1,6 @@
 import { saveAs } from 'file-saver'
-import { KnowledgeEntry } from './types'
+// 修改这一行，加上 type 关键字
+import type { KnowledgeEntry } from './types'
 
 function htmlToPlainText(html: string): string {
   return html
@@ -29,12 +30,15 @@ export function exportToWord(title: string, content: string) {
 
 export function exportKnowledgeToJSON(knowledge: KnowledgeEntry[]) {
   const data = JSON.stringify(knowledge, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
+  const blob = new Blob([data], { type: 'application/json;charset=utf-8' })
   saveAs(blob, `知识库备份_${new Date().toLocaleDateString()}.json`)
 }
 
 export function exportKnowledgeToTxt(knowledge: KnowledgeEntry[]) {
-  const content = knowledge.map(k => `【${k.category}】${k.title}\n关键词: ${k.keywords.join(',')}\n内容: ${k.content}\n`).join('\n---\n\n')
-  const blob = new Blob([content], { type: 'text/plain' })
+  const content = knowledge.map(k => (
+    `【${k.category}】${k.title}\n关键词: ${k.keywords.join(', ')}\n内容:\n${k.content}\n` + 
+    `----------------------------`
+  )).join('\n\n')
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   saveAs(blob, `知识库手册_${new Date().toLocaleDateString()}.txt`)
 }
