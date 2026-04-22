@@ -6,15 +6,8 @@ interface Store {
   docs: Doc[]
   currentDocId: string | null
   messages: Message[]
-  
-  // --- 多模型管理 ---
   aiProviders: AISettings[]
   activeProviderId: string
-  addAIProvider: (name: string) => void
-  updateAIProvider: (id: string, settings: Partial<AISettings>) => void
-  deleteAIProvider: (id: string) => void
-  setActiveProvider: (id: string) => void
-
   knowledge: KnowledgeEntry[]
   externalKnowledge: KnowledgeEntry[]
   addDoc: (title: string) => void
@@ -26,6 +19,10 @@ interface Store {
   updateMessage: (index: number, content: string) => void
   clearMessages: () => void
   removeMessagesFrom: (index: number) => void
+  addAIProvider: (name: string) => void
+  updateAIProvider: (id: string, settings: Partial<AISettings>) => void
+  deleteAIProvider: (id: string) => void
+  setActiveProvider: (id: string) => void
   addKnowledge: (entry: Omit<KnowledgeEntry, 'id'>) => void
   updateKnowledge: (id: string, entry: Partial<KnowledgeEntry>) => void
   deleteKnowledge: (id: string) => void
@@ -48,24 +45,8 @@ export const useStore = create<Store>()(
       docs: [],
       currentDocId: null,
       messages: [],
-      
       aiProviders: [DEFAULT_PROVIDER],
       activeProviderId: 'default',
-      
-      addAIProvider: (name) => set((s) => {
-        const newP: AISettings = { id: Date.now().toString(), name, apiUrl: '', apiKey: '', model: '' }
-        return { aiProviders: [...s.aiProviders, newP], activeProviderId: newP.id }
-      }),
-      updateAIProvider: (id, settings) => set((s) => ({
-        aiProviders: s.aiProviders.map(p => p.id === id ? { ...p, ...settings } : p)
-      })),
-      deleteAIProvider: (id) => set((s) => {
-        const newProviders = s.aiProviders.filter(p => p.id !== id)
-        const nextId = s.activeProviderId === id ? (newProviders[0]?.id || 'default') : s.activeProviderId
-        return { aiProviders: newProviders.length > 0 ? newProviders : [DEFAULT_PROVIDER], activeProviderId: nextId }
-      }),
-      setActiveProvider: (id) => set({ activeProviderId: id }),
-
       knowledge: [],
       externalKnowledge: [],
       addDoc: (title) => {
@@ -80,6 +61,19 @@ export const useStore = create<Store>()(
       updateMessage: (index, content) => set((s) => ({ messages: s.messages.map((m, i) => i === index ? { ...m, content } : m) })),
       clearMessages: () => set({ messages: [] }),
       removeMessagesFrom: (index) => set((s) => ({ messages: s.messages.slice(0, index) })),
+      addAIProvider: (name) => set((s) => {
+        const newP: AISettings = { id: Date.now().toString(), name, apiUrl: '', apiKey: '', model: '' }
+        return { aiProviders: [...s.aiProviders, newP], activeProviderId: newP.id }
+      }),
+      updateAIProvider: (id, settings) => set((s) => ({
+        aiProviders: s.aiProviders.map(p => p.id === id ? { ...p, ...settings } : p)
+      })),
+      deleteAIProvider: (id) => set((s) => {
+        const newProviders = s.aiProviders.filter(p => p.id !== id)
+        const nextId = s.activeProviderId === id ? (newProviders[0]?.id || 'default') : s.activeProviderId
+        return { aiProviders: newProviders.length > 0 ? newProviders : [DEFAULT_PROVIDER], activeProviderId: nextId }
+      }),
+      setActiveProvider: (id) => set({ activeProviderId: id }),
       addKnowledge: (entry) => set((s) => ({ knowledge: [...s.knowledge, { ...entry, id: Date.now().toString() }] })),
       updateKnowledge: (id, entry) => set((s) => ({ knowledge: s.knowledge.map((k) => k.id === id ? { ...k, ...entry } : k) })),
       deleteKnowledge: (id) => set((s) => ({ knowledge: s.knowledge.filter((k) => k.id !== id) })),
